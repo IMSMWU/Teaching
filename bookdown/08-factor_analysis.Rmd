@@ -1,0 +1,12 @@
+---
+title: "08-Factor Analysis"
+output:
+  html_document:
+    toc: yes
+  html_notebook: default
+  pdf_document:
+    toc: yes
+---
+
+# Factor analysis
+

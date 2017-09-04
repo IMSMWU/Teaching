@@ -1,0 +1,287 @@
+---
+title: "05-hypotheses testing"
+output:
+  html_document:
+    toc: yes
+  html_notebook: default
+  pdf_document:
+    toc: yes
+---
+
+# Hypothesis testing
+
+## Introduction
+
+### Why do we test hypotheses?
+
+* We test hypotheses because we take samples – we rarely work with the entire population
+* A sample that we take is likely to be different from a second sample that we take from the same population
+* We use hypothesis tests to generalize from the sample to the population
+* We need some measure of uncertainty we can assign to data analytic results
+
+<p style="text-align:center;">
+<img src="https://github.com/IMSMWU/Teaching/raw/master/MRDA2017/samplingdistribution.JPG" alt="DSUR cover" height="250"  />&nbsp;&nbsp;&nbsp;
+</p>
+
+We use the standard error (i.e., the standard deviation of a large number of hypothetical samples) to gauge how well a particular sample represents the population. Recall the definition of the standard effor:
+
+<p style="text-align:center;">
+$\Large SE = \frac{s}{\sqrt{n}}$
+</p>
+
+* If the standard error is low, then we expect most samples to have similar means
+* If the standard error is large, large differences in sample means are more likely
+* The larger the sample size, the smaller the standard error of the mean
+
+If the difference in sample means is larger than we would expect based on the standard error:
+
+* Collected samples may be atypical of the population, or, 
+* Samples come from different populations but are typical of their respective population
+
+```{r message=FALSE, warning=FALSE, eval=TRUE, echo=FALSE}
+library(ggplot2)
+n_pop <- 1000000
+y_pop <- rnorm(n_pop, 1, 5)
+R <- 1000
+sems <- numeric()
+replication <- numeric()
+
+for (r in 10:R) {
+  y_sample <- sample(y_pop, r)
+  sem <- sd(y_sample)/sqrt(length(y_sample))
+  sems <- rbind(sems, sem)
+  replication <- rbind(replication, r)
+}
+
+df <- as.data.frame(cbind(replication, sems))
+ggplot(data=df, aes(y=sems, x=replication)) + geom_line() + ylab("Standard error of the mean") + xlab("Sample size") + theme_bw()
+
+```
+
+### The process of hypothesis testing
+
+1. Formulate null and alternative hypotheses
+2. Select an appropriate test
+3. Choose the level of significance (&alpha;)
+4. Collect data and calculate the test statistic (T<sub>CAL</sub>)
+5. Reject or do not reject H<sub>0</sub>
+6. Draw a marketing conclusion
+
+## Comparing two means
+
+### Formulate null and alternative hypotheses
+
+The 
+
+
+```{r message=FALSE, warning=FALSE, eval=TRUE, echo=FALSE}
+library(dplyr)
+library(psych)
+library(ggplot2)
+music_sales <- read.table("https://raw.githubusercontent.com/IMSMWU/Teaching/master/MRDA2017/music_sales_long.dat", sep = "\t", header = T)
+#kable(music_sales) %>% 
+#knitr::kable(music_sales, format = "html", table.attr = "style='width:30%;'")
+#kable(head(music_sales), "html") %>% kable_styling(full_width = F)
+#kable_styling(bootstrap_options = "striped", full_width = F)
+head(music_sales)
+music_sales$group <- factor(music_sales$group, levels = c(1:2), labels = c("low_price", "high_price")) #creates factor variable for experimental group
+#overall descriptives
+describe(music_sales$unit_sales)
+describeBy(music_sales$unit_sales,music_sales$group)
+#frequencies
+table(music_sales$unit_sales,music_sales$group)
+
+ggplot(music_sales, aes(x = group, y = unit_sales)) + geom_boxplot() + labs(x = "Experimental group", y = "Number of sales") + theme_bw() #add the graphical layers
+
+ggplot(music_sales, aes(group, unit_sales)) + stat_summary(fun.y = mean, geom = "bar", fill="White", colour="Black") +
+  stat_summary(fun.data=mean_cl_normal, geom = "pointrange") + labs(x = "Experimental group", y = "Number of sales") +
+  theme_bw()
+
+```
+
+
+```{r message=FALSE, warning=FALSE}
+for (degfred in c(1,10,100,1000)) {
+df <- degfred
+p1 <- 0.025
+p2 <- 0.975
+min <- -5
+max <- 5
+t1 <- round(qt(p1,df=df), digits = 3)
+t2 <- round(qt(p2,df=df), digits = 3)
+print(ggplot(data.frame(x = c(min, max)), aes(x = x)) +
+  stat_function(fun = dt, args = list(df = df)) + 
+  stat_function(fun = dt, args = list(df = df), xlim = c(min,qt(p1,df=df)), geom = "area") +
+  stat_function(fun = dt, args = list(df = df), xlim = c(max,qt(p2,df=df)), geom = "area") +
+  scale_x_continuous(breaks = c(t1,t2)) +
+    labs(title = paste0("Critical values for t-distribution with ",df," df"),
+       subtitle = "Two-tailed test and a=0.05",
+       x = "x", y = "Density") +
+  theme(axis.title = element_text(size = 14),
+        axis.text  = element_text(size=14),
+        strip.text.x = element_text(size = 14),
+        legend.position="none") + theme_bw())
+}
+```
+
+```{r message=FALSE, warning=FALSE}
+library(cowplot)
+library(gridExtra)
+library(grid)
+
+df <- 5
+p1 <- 0.025
+p2 <- 0.975
+min <- -5
+max <- 5
+t1 <- round(qt(p1,df=df), digits = 3)
+t2 <- round(qt(p2,df=df), digits = 3)
+plot1 <- ggplot(data.frame(x = c(min, max)), aes(x = x)) +
+  stat_function(fun = dt, args = list(df = df)) + 
+  stat_function(fun = dt, args = list(df = df), xlim = c(min,qt(p1,df=df)), geom = "area") +
+  stat_function(fun = dt, args = list(df = df), xlim = c(max,qt(p2,df=df)), geom = "area") +
+  scale_x_continuous(breaks = c(t1,t2)) +
+    labs(title = paste0("df= ",df),x = "x", y = "Density") +
+  theme(legend.position="none") + theme_bw()
+
+df <- 10
+p1 <- 0.025
+p2 <- 0.975
+min <- -5
+max <- 5
+t1 <- round(qt(p1,df=df), digits = 3)
+t2 <- round(qt(p2,df=df), digits = 3)
+plot2 <- ggplot(data.frame(x = c(min, max)), aes(x = x)) +
+  stat_function(fun = dt, args = list(df = df)) + 
+  stat_function(fun = dt, args = list(df = df), xlim = c(min,qt(p1,df=df)), geom = "area") +
+  stat_function(fun = dt, args = list(df = df), xlim = c(max,qt(p2,df=df)), geom = "area") +
+  scale_x_continuous(breaks = c(t1,t2)) +
+    labs(title = paste0("df= ",df),x = "x", y = "Density") +
+  theme(legend.position="none") + theme_bw()
+
+df <- 100
+p1 <- 0.025
+p2 <- 0.975
+min <- -5
+max <- 5
+t1 <- round(qt(p1,df=df), digits = 3)
+t2 <- round(qt(p2,df=df), digits = 3)
+plot3 <- ggplot(data.frame(x = c(min, max)), aes(x = x)) +
+  stat_function(fun = dt, args = list(df = df)) + 
+  stat_function(fun = dt, args = list(df = df), xlim = c(min,qt(p1,df=df)), geom = "area") +
+  stat_function(fun = dt, args = list(df = df), xlim = c(max,qt(p2,df=df)), geom = "area") +
+  scale_x_continuous(breaks = c(t1,t2)) +
+    labs(title = paste0("df= ",df),x = "x", y = "Density") +
+  theme(legend.position="none") + theme_bw()
+
+
+df <- 1000
+p1 <- 0.025
+p2 <- 0.975
+min <- -5
+max <- 5
+t1 <- round(qt(p1,df=df), digits = 3)
+t2 <- round(qt(p2,df=df), digits = 3)
+plot4 <- ggplot(data.frame(x = c(min, max)), aes(x = x)) +
+  stat_function(fun = dt, args = list(df = df)) + 
+  stat_function(fun = dt, args = list(df = df), xlim = c(min,qt(p1,df=df)), geom = "area") +
+  stat_function(fun = dt, args = list(df = df), xlim = c(max,qt(p2,df=df)), geom = "area") +
+  scale_x_continuous(breaks = c(t1,t2)) +
+    labs(title = paste0("df= ",df),
+      x = "x", y = "Density") +
+  theme(legend.position="none") + theme_bw()
+
+p <- plot_grid(plot1, plot2,plot3, plot4, ncol = 2)
+# now add the title
+title <- ggdraw() + draw_label("Critical values for t-distribution (two-tailed, a=0.05)", fontface='bold')
+plot_grid(title, p, ncol=1, rel_heights=c(0.1, 1)) # rel_heights values control title margins
+
+
+
+```
+
+
+&nbsp; | <b>H<sub>0</sub> is false</b>	 | <b>H<sub>0</sub> is true</b>	
+---------------------------- | ------------------------ | --------------------------
+Statistically significant: reject H<sub>0</sub>  | Accurate result!<br>  True positive | Type 1 error (&alpha;)<br>  False positive
+Not statistically significant: fail to reject H<sub>0</sub>  | Type 2 error (&beta;) <br> False negative | Accurate result!<br>  True negative
+
+* Type I error: When we believe there it a genuine effect in our population, when in fact, there isn’t. Probability of Type I Error (&alpha;) = level of significance.
+* Type II error: When we believe that there is no effect in the population, when in fact, there is. Unlike &alpha;, which is specified by the researcher, the magnitude of &beta; depends on the actual value of the population parameter.
+
+
+```{r message=FALSE, warning=FALSE}
+# ===== Sample size for comparison of means (based on hypothesis test)
+# Suppose we have some sample data from a pre-test or historical data
+data1 <- c(3, 5, 2, 8, 3, 2, 3)
+sd(data1)
+# Want to detect a difference in the means of 1.5 between two groups 
+# with 95% confidence and 95% power. What sample size do we need?
+power.t.test(delta=1.5, sd=sd(data1), sig.level=0.05, power=0.80)
+# What if we can get 100 observations (in each group)?
+power.t.test(delta=1.5, sd=sd(data1), sig.level=0.05, n=100)
+
+# ===== Sample size for comparison of proportions (based on hypothesis test)
+# Want to detect a difference of 3% conversion between two groups.
+power.prop.test(p1=0.5, p2=0.47, sig.level=0.05, power=0.95)
+# If we can only get 1000 in each group
+power.prop.test(p1=0.5, p2=0.47, sig.level=0.05, n=1000)
+
+#equivalent for means (instead of proportions)
+#e.g., stores, sales difference we care about and standard deviation
+power.t.test(delta=3, sd=6, sig.level=0.05, power=0.8)
+power.t.test(delta=500, sd=200, sig.level=0.05, n=1000)
+```
+
+p-hacking
+
+```{r message=FALSE, warning=FALSE}
+set.seed(300)
+R <- 1000 
+tvalues <- numeric()
+replication <- numeric()
+group1 <- rnorm(3,1,10)
+group2 <- rnorm(3,1,10)
+
+for (r in 1:R) {
+  newobs <- rnorm(1,1,10)
+  if (runif(1 )> .5) {
+    group1 <- c(group1, newobs)
+  } else {
+    group2 <- c(group2, newobs)
+  }
+  t <- t.test(group1, group2, var.equal = TRUE)
+  tvalues[r] <- t$statistic
+  replication[r] <- r
+}
+print(length(group1))
+print(length(group2))
+df <- as.data.frame(cbind(replication, tvalues))
+ggplot(data=df, aes(y=tvalues, x=replication)) +
+  geom_line()
+```
+
+## Comparing two proportions
+
+## Categorical data
+
+```{r message=FALSE, warning=FALSE}
+test_data <- read.table("https://raw.githubusercontent.com/IMSMWU/Teaching/master/MRDA2017/test_data.dat", sep = "\t", header = T)
+test_data$overall_knowledge_cat <- factor(test_data$OverallKnowledge, levels = c(0:4), labels = c("none", "basic", "intermediate","advanced","proficient"))
+test_data$gender_cat <- factor(test_data$Gender, levels = c(1:2), labels = c("male", "female"))
+test_data$Theory_Regression_cat <- factor(test_data$Theory_Regression, levels = c(1:5), labels = c("none", "basic", "intermediate","advanced","proficient"))
+test_data$Practice_Regression_cat <- factor(test_data$Practice_Regression, levels = c(1:5), labels = c("none", "basic", "intermediate","advanced","proficient"))
+
+chisq.test(table(test_data[,c("overall_knowledge_cat")])) #relative frequencies
+chisq.test(table(test_data[,c("overall_knowledge_cat","gender_cat")])) #relative frequencies
+prop.test(table(test_data[,c("overall_knowledge_cat","gender_cat")])*100) #relative frequencies
+
+#chisq.test(table(test_data[,c("Theory_Regression_cat","Practice_Regression_cat")])) #relative frequencies
+#prop.test(table(test_data[,c("Theory_Regression_cat","Practice_Regression_cat")])*100) #relative frequencies
+
+
+
+```
+
+
+

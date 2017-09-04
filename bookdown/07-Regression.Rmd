@@ -1,0 +1,137 @@
+---
+title: "07-Regression"
+output:
+  html_document:
+    toc: yes
+  html_notebook: default
+  pdf_document:
+    toc: yes
+---
+
+# Regression
+
+## Correlation
+
+```{r message=FALSE, warning=FALSE, echo=FALSE, eval=TRUE}
+attitude <- c(6,9,8,3,10,4,5,2,11,9,10,2)
+duration <- c(10,12,12,4,12,6,8,2,18,9,17,2)
+attData <- data.frame(attitude,duration)
+attData <- attData[order(-attitude),]
+attData$respodentID <- c(1:12)
+library(ggplot2)
+str(attData)
+
+ggplot(attData, aes(x=respodentID,y=duration)) + 
+  geom_point(size=3,color="deepskyblue4") + scale_x_continuous(breaks = 1:12) + 
+  geom_hline(data = attData, aes(yintercept = mean(duration)),color="deepskyblue4") +
+  labs(x = "Observations",y = "Duration of residency", size=11) +
+  coord_cartesian(ylim=c(0,18)) +
+  geom_segment(aes(x=respodentID,y=duration, xend=respodentID, yend=mean(duration)),color="deepskyblue4",size=1) + 
+  theme(axis.title = element_text(size = 16),
+        axis.text  = element_text(size=16),
+        strip.text.x = element_text(size = 16),
+        legend.position="none")+ theme_bw()
+
+ggplot(attData, aes(x=respodentID,y=attitude)) + 
+  geom_point(size=3,color="#f9756d") + scale_x_continuous(breaks = 1:12) + 
+  geom_hline(data = attData, aes(yintercept = mean(attitude)),color="#f9756d") +
+  labs(x = "Observations",y = "Duration of residency", size=11) +
+  coord_cartesian(ylim=c(0,18)) +
+  geom_segment(aes(x=respodentID,y=attitude, xend=respodentID, yend=mean(attitude)),color="#f9756d",size=1) + 
+  theme(axis.title = element_text(size = 16),
+        axis.text  = element_text(size=16),
+        strip.text.x = element_text(size = 16),
+        legend.position="none")+ theme_bw()
+
+
+
+
+var1 <- data.frame(var=c(6,9,8,3,10,4,5,2,11,9,10,2))
+var2 <- data.frame(var=c(10,12,12,4,12,6,8,2,18,9,17,2))
+frame <- rbind(var1,var2)
+frame$store <-c(rep(1,12),rep(2,12))
+frame <- frame[order(-frame$store,-frame$var),]
+frame$store <- factor(frame$store, levels = c(1:2), labels = c(1,2))
+
+frame$observation <-c(rep(1:12),rep(1:12))
+frame <- frame[order(-frame$var),]
+
+ggplot(frame, aes(x=observation,y=var, color=store)) + geom_point(size=3) + scale_x_continuous(breaks = 1:12) + 
+  geom_hline(data = attData, aes(yintercept = mean(duration)),color="deepskyblue4") +
+  geom_hline(data = attData, aes(yintercept = mean(attitude)),color="#f9756d") +
+  labs(x = "Observations",y = "Duration of residency", size=11) +
+  coord_cartesian(ylim=c(0,18)) +
+  scale_color_manual(values=c("#f9756d","deepskyblue4")) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 16),
+        axis.text  = element_text(size=16),
+        strip.text.x = element_text(size = 16),
+        legend.position="none")
+```
+
+## Linear Regression
+
+```{r message=FALSE, warning=FALSE, echo=FALSE, eval=TRUE}
+
+library(RCurl)
+url <- "https://raw.githubusercontent.com/IMSMWU/Teaching/master/MRDA2017/bivariate_regression.dat"
+regression <- getURL(url,ssl.verifypeer=FALSE) 
+regression <- read.table(textConnection(regression), header=TRUE, sep = "\t")
+regression <- regression[order(-regression$advertising),]
+regression$IDn <- c(1:25)
+str(regression)
+#scatterplot
+
+ggplot(regression[order(regression$storeID),], aes(x=storeID,y=advertising)) +   
+  geom_point(size=3) + labs(x = "Store ID",y = "Advertising", size=11) +
+  theme(axis.title = element_text(size = 16),
+        axis.text  = element_text(size=16),
+        strip.text.x = element_text(size = 16),
+        legend.position="none") + theme_bw()
+
+#sum of squares
+
+lm <- lm(sales ~ advertising, data = regression)
+regression$yhat <- predict(lm)
+
+ggplot(regression, aes(x=advertising,y=sales)) + 
+  geom_point(size=3,color="deepskyblue4") + 
+  labs(x = "Advertising",y = "Sales", size=11) +
+  scale_y_continuous(breaks=seq(30000, 60000, 5000)) +
+  coord_cartesian(ylim=c(30000,60000)) +
+  geom_segment(aes(x=advertising,y=sales, xend=advertising, yend=yhat),color="deepskyblue4",size=1, linetype="dashed") + 
+  geom_smooth(method = "lm", se=FALSE,color="black") +
+  theme(axis.title = element_text(size = 16),
+        axis.text  = element_text(size=16),
+        strip.text.x = element_text(size = 16),
+        legend.position="none") + theme_bw()
+
+ggplot(regression, aes(x=advertising,y=sales)) + 
+  geom_point(size=3,color="deepskyblue4") + 
+  labs(x = "Advertising",y = "Sales", size=11) +
+  scale_y_continuous(breaks=seq(30000, 60000, 5000)) +
+  coord_cartesian(ylim=c(30000,60000)) +
+  geom_segment(aes(x=advertising,y=yhat, xend=advertising, yend=mean(sales)),color="deepskyblue4",size=1, linetype="dashed") + 
+  geom_smooth(method = "lm", se=FALSE,color="black") +
+  geom_hline(data = regression, aes(yintercept = mean(sales)),color="black", size=1) +
+  theme(axis.title = element_text(size = 16),
+        axis.text  = element_text(size=16),
+        strip.text.x = element_text(size = 16),
+        legend.position="none") + theme_bw()
+
+ggplot(regression, aes(x=advertising,y=sales)) +
+  geom_point(size=3,color="deepskyblue4") + 
+  labs(x = "Advertising",y = "Sales", size=11) +
+  geom_segment(aes(x=advertising,y=sales, xend=advertising, yend=mean(sales)),color="deepskyblue4",size=1, linetype="dashed") + 
+  geom_hline(data = regression, aes(yintercept = mean(sales)),color="black", size=1) +
+  scale_y_continuous(breaks=seq(30000, 60000, 5000)) +
+  coord_cartesian(ylim=c(30000,60000)) +
+  theme(axis.title = element_text(size = 16),
+        axis.text  = element_text(size=16),
+        strip.text.x = element_text(size = 16),
+        legend.position="none") + theme_bw()
+
+```
+
+## Logistic Regression
+

@@ -1,0 +1,163 @@
+---
+title: "03-summary statistics"
+output:
+  html_document:
+    toc: yes
+  html_notebook: default
+  pdf_document:
+    toc: yes
+
+---
+
+# Summary statistics
+
+```{r echo=FALSE, eval=TRUE}
+options(scipen = 999)
+```
+
+This section dicusses how to produce and analyse basic summary statistics. We make a distinction between categorical and continuous variables, for which different statistics are permissible.
+
+OK to compute....	 | Nominal	 | Ordinal	 | Interval	 | Ratio
+------------- | ------------- | ------------- | --- | ---
+frequency distribution  | Yes  | Yes  | Yes  | Yes
+median and percentiles  | No  | No  | Yes  | Yes
+mean, standard deviation, standard error of the mean | No  | No  | Yes  | Yes
+ratio, or coefficient of variation  | No  | No  | No  | Yes
+
+## Categorical variables
+
+Categorical variables contain a finite number of categories or distinct groups and are also known as qualitative variables. There are different types of categorical variables:
+
+* Nominal variables: variables that have two or more categories but no logical order (e.g., music genres). A dichotomous variables is simply a nominal variable that only has two categories (e.g., gender).
+* Ordinal variables: variables that have two or more categories that can also be ordered or ranked (e.g., income groups)
+
+We use the MRDA student survey data as an example of how to compute a frequency table from categorical variables. Let's load the data first:  
+
+```{r message=FALSE, warning=FALSE}
+test_data <- read.table("https://raw.githubusercontent.com/IMSMWU/Teaching/master/MRDA2017/test_data.dat", sep = "\t", header = T)
+```
+
+We are interested in the following two variables
+
+* "OverallKnowledge": measures the self-reported prior knowledge of marketing students in statistics before taking the marketing research class on a 5-point scale with the categories "none", "basic", "intermediate","advanced", and "proficient".
+* "Gender": the gender of the students (1=male, 2=female)
+
+In a first step, we convert the variables to factor variables:
+
+```{r}
+test_data$overall_knowledge_cat <- factor(test_data$OverallKnowledge, levels = c(0:4), labels = c("none", "basic", "intermediate","advanced","proficient"))
+test_data$gender_cat <- factor(test_data$Gender, levels = c(1:2), labels = c("male", "female"))
+```
+
+The ```table(...)``` function creates a frequency table. Let's start with the number of occurences of the categories associated with the prio knowledge and gender variables separately:
+
+```{r}
+table(test_data[,c("overall_knowledge_cat")]) #absolute frequencies
+table(test_data[,c("gender_cat")]) #absolute frequencies
+```
+
+It is obvious that there are more female than male students. It is easy to compute the median category of the "overall_knowledge_cat" variable by using the ```median(...)``` function. However, since we have converted the variable to a factor, we need to wrap it in the ```as.numeric(...)``` function so that R treats it as a numeric variable. 
+
+```{r}
+median(as.numeric(test_data[,c("overall_knowledge_cat")]))
+```
+
+Often, we are interested in the relative frequencies, which can be obtained by using the ```prop.table(...)``` function.
+
+```{r}
+prop.table(table(test_data[,c("overall_knowledge_cat")])) #relative frequencies
+prop.table(table(test_data[,c("gender_cat")])) #relative frequencies
+```
+
+Now let's investigate if the prior knowledge differs by gender. To do this, we simply apply the ```table(...)```-function to both variables:
+
+```{r}
+table(test_data[,c("overall_knowledge_cat","gender_cat")]) #absolute frequencies
+prop.table(table(test_data[,c("overall_knowledge_cat","gender_cat")])) #relative frequencies
+prop.table(table(test_data[,c("overall_knowledge_cat","gender_cat")]),2) #conditional relative frequencies
+```
+
+## Continuous variables
+
+Continuous variables are numeric variables that can take on any value on a measurement scale (i.e., there is an infinite number of values between any two values). There are different types of continuous variables:
+*) Interval variables: while the zero point is arbitrary, equal intervals on the scale represent equal differences in the property being measured. E.g., on a temperature scale the difference between a temperature of 15 degrees and  25 degrees is the same difference as between 25 degrees and 35 degrees. 
+*) Ratio variables: has all the properties of an interval variable, but also has an absolute zero point. When the variable equals 0.0, it means that there is none of that variable (e.g., number of products solt, willingness-to-pay, milage a car gets). 
+
+Computing descriptive statistics in R is easy and there are many functions from different packages that let you calculate summary statistics (including the ```summary(...)```-function from the ```base(...)``` package). In this tutorial, we will use the ```describe(...)```-function from the ```psych(...)``` package:
+
+```{r message=FALSE, warning=FALSE}
+library(psych)
+describe(test_data[,c("Duration__in_seconds_","Knowledge100")])
+```
+
+The ```psych(...)``` package also contains the ```describeBy(...)```-function, which lets you compute the summary statistics by sub-group separately. For example, we could easily compute the summary statistics by gender as follows: 
+
+```{r message=FALSE, warning=FALSE}
+describeBy(test_data[,c("Duration__in_seconds_","Knowledge100")],test_data$gender_cat)
+```
+
+Note that you could also compute these statistics separately by using the respecting functions (e.g., ```mean(...)```, ```sd(...)```, ```median(...)```, ```min(...)```, ```max(...)```, etc.)
+
+To compute percentiles, you can use the ```quantile(...)```-function. The nth percentile of an observation variable is the value that cuts off the first n percent of the data values when it is sorted in ascending order.
+
+```{r}
+quantile(test_data$Duration__in_seconds_, probs = 0.75) #the 75th percentile
+quantile(test_data$Duration__in_seconds_, probs = 0.25) #the 25th percentile
+quantile(test_data$Duration__in_seconds_, probs = 0.75) - quantile(test_data$Duration__in_seconds_, probs = 0.25) #the interquartile range
+IQR(test_data$Duration__in_seconds_) #also produces the interquartile range (equivalent to the previous line)
+```
+
+The frequency distribution can also be used to make statements about the probability that a certain value would occur. Remember that for the normal distribution, the values less than one standard deviation away from the mean account for 68.27% of the observations, while two standard deviations from the mean account for 95.45%; and three standard deviations account for 99.73%.
+
+<p style="text-align:center;">
+<img src="https://github.com/IMSMWU/Teaching/raw/master/MRDA2017/Graphics/normalprops.JPG" alt="normalprobs" height="300"  />&nbsp;
+</p>
+
+Let's put this to the test. It is easy to compute the z-scores for a variable from the data using the ```scale(...)```-function. Remember that this converts the variable to a scale with mean = 0 and SD = 1, so we can use the tables of probabilities for the normal distribution to see how likely it is that a particular score will occur in the data. Remember the formula for the z-score is:
+
+<p style="text-align:center;">
+$\Large z = \frac{x_i - \overline{x}}s$
+</p>
+
+
+```{r message=FALSE, warning=FALSE}
+test_data$Duration__in_seconds_std <- scale(test_data$Duration__in_seconds_, center = TRUE, scale = TRUE) #computes z-scores and stores them in new variable
+#this is equivalent to the following manual computation of z-scores
+test_data$Duration__in_seconds_std_test <- (test_data$Duration__in_seconds_-mean(test_data$Duration__in_seconds_))/sd(test_data$Duration__in_seconds_) #also computes z-scores
+head(test_data[,c("Duration__in_seconds_","Duration__in_seconds_std","Duration__in_seconds_std_test")]) #test if both are the same
+mean(test_data$Duration__in_seconds_std) #tests if mean equals 0
+sd(test_data$Duration__in_seconds_std) #tests if sd equals 1
+```
+
+Now you can easily compute the percentage of observations within a specific range from the mean:
+
+```{r message=FALSE, warning=FALSE}
+nrow(subset(test_data,Duration__in_seconds_std<=1 & Duration__in_seconds_std>=-1))/nrow(test_data) #share of observations within 1SD
+nrow(subset(test_data,Duration__in_seconds_std<=2 & Duration__in_seconds_std>=-2))/nrow(test_data) #share of observations within 2SD
+nrow(subset(test_data,Duration__in_seconds_std<=3 & Duration__in_seconds_std>=-3))/nrow(test_data) #share of observations within 3 SD
+```
+
+Next, we can find the probability associated with each observation in our dataset using the ```pnorm(...)```-function, which returns the probability for a given standardized score according to the normal distribution. For a two sided test we need to multiply the result by two. Also, if the Z-score that is found is positive then we need to take one minus the associated probability. Here we take care of this issues and insure that the Z-score is negative by taking the negative of the absolute value.
+
+```{r message=FALSE, warning=FALSE}
+test_data$probability <- 2*pnorm(-(abs(test_data$Duration__in_seconds_std)))
+head(test_data[order(test_data$probability),])
+```
+
+Finally, let's compute a confidence intervall around the mean. Remember the formula for the confidence interval:
+
+<p style="text-align:center;">
+$\Large CI = \overline{X}\pm(z*\frac{s}{\sqrt{n}})$
+</p>
+
+We can obtain the critical z-score for the 95% CI using the ```qnorm(...)```-function. Using ```nrow(data_set)```, we can obtain the number ob rows (i.e., observations) in a dataset. 
+
+```{r message=FALSE, warning=FALSE}
+error <- qnorm(0.975)*sd(test_data$Duration__in_seconds_)/sqrt(nrow(test_data))
+ci_lower <- mean(test_data$Duration__in_seconds_)-error
+ci_upper <- mean(test_data$Duration__in_seconds_)+error
+print(ci_lower)
+print(ci_upper)
+```
+
+We are 95% confident that the true average response time of our survey is between 217.73 and 275.29!

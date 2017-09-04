@@ -1,0 +1,106 @@
+---
+title: "02-importing and exporting data"
+output:
+  html_document:
+    toc: yes
+  html_notebook: default
+  pdf_document:
+    toc: yes
+---
+
+# Data import and export 
+
+```{r echo=FALSE, eval=FALSE}
+install.packages("rvest")
+install.packages("jsonlite")
+install.packages("readxl")
+install.packages("haven")
+```
+
+Before you can start your analytics in R, you first need to import the data you wish to perform the analytics on. You will often be faced with different types of data formats (usually produced by some other statistical software like SPSS or Excel or a text editor). Fortunately, R is fairly flexible with respect to the sources from which data may be imported and you can import the most common data formats into R with the help of a few packages.
+
+<p style="text-align:center;"><img src="https://github.com/IMSMWU/Teaching/raw/master/MRDA2017/Graphics/data_import.JPG" alt="data import" height="250"></p>
+
+## Getting data for this course
+
+Most of the datasets we will be working with in this course will be stored in text files (i.e., .dat, .txt, .csv). There are two ways for you to obtain access to the datasets:
+
+### Directly import datasets from GitHub (recommended)
+
+All datasets we will be working with are stored in a repository on GitHub (similar to other cloud storage services such as Dropbox). If you know the location, where the files are stored, you may conveniently load the data directly from GitHub into R using the ```read.table(...)```-function. The ```header=TRUE``` argument indicates that the first line of data represents the header. The ```sep="\t"```-argument specifies the delimiter, which is a TAB in this case.
+
+```{r}
+test_data <- read.table("https://raw.githubusercontent.com/IMSMWU/Teaching/master/MRDA2017/test_data.dat", sep = "\t", header = T)
+```
+
+### Download and import datasets from "Learn"
+
+It is also possible to download the data from the respective folder on the "Learn" platform, place it in the working directory and import it from there. However, this requires and additional step to download the file manually first. If you chose this option, please <b>remember to put the data file in the working directory first</b>. If the import is not working, check your working directory setting using ```getwd()```. Once you placed the file in the working directory, you can import it using the same command as above:
+
+```{r eval=FALSE, message=FALSE, warning=FALSE}
+test_data <- read.table(test_file, header=TRUE)
+```
+
+## Import data created by other software packages
+
+Sometimes, you may need to import data files created by other software packages, such as Excel or SPSS. In this section we will use the ```readxl``` and ```haven``` packages to do this. To import a certain file you should first make sure that the file is stored in your current working directory. You can list all file names in your working directory using the ```list.files()```-function. If the file is not there, either copy it to your current working directory, or set your working directory to the folder where the file is located using ```setwd("/path/to/file")```. This tells R the folder you are working in. Remember that you have to use ```/``` instead of ```\``` to specify the path (if you use Windows paths copied from the explorer will not work). Alternatively, you can set the working directory with R-Studio by clicking on the "Files" tab, navigating to the folder, clicking on "More" and "Set As Working Directory". When your file is in your working directory you can simply enter the filename into the respective import command. The import commands offer various options. For more details enter ```?read_excel```, ```?read_spss``` (...) after loading the packages.
+
+```{r, eval=FALSE}
+list.files() #lists all files in the current working directory
+#setwd("/path/to/file") #may be used to change the working directory to the folder that contains the desired file
+
+#import excel files
+library(readxl) #load package to import Excel files
+excel_sheets("test_data.xlsx")
+test_data_excel <- read_excel("test_data.xlsx", sheet = "mrda_2016_survey") # "sheet=x"" specifies which sheet to import
+head(test_data_excel)
+
+library(haven) #load package to import SPSS files
+#import SPSS files
+test_data_spss <- read_sav("test_data.sav")
+head(test_data_spss)
+```
+
+The import of other file formats works in a very similar way (e.g., Stata, SAS). Please refer to the respective help-files (e.g., ```?read_dta```, ```?read_sas``` ...) if you wish to import data created by other software packages. 
+
+## Import data from other sources
+
+### Scraping data from websites
+
+Sometimes you come accross interesting data on websites that you would like to analyse. Reading data from websites is possible in R, e.g., using the ```?rvest``` package. Let's assume you would like to read a table that lists the population of different countries from <a href="https://en.wikipedia.org/wiki/List_of_countries_and_dependencies_by_population" target="_blank">this Wikipedia page</a>. It helps to first inspect the structure of the website (e.g., using tools like <a href="http://selectorgadget.com/" target="_blank">SelectorGadget</a>), so you know which elements you would like to extract. In this case it is fairly obvious that the data are stored in a table for which the associated html-tag is ```<table>```. So let's read the entire website using ```read_html(url)``` and filter all tables using ```read_html(html_nodes(...,"table"))```.
+
+```{r message=FALSE, warning=FALSE}
+library(rvest)
+url <- "https://en.wikipedia.org/wiki/List_of_countries_and_dependencies_by_population"
+population <- read_html(url) 
+population <- html_nodes(population,"table")
+print(population)
+```
+
+The output shows that there are two tables on the website and the first one appears to contain the relevant information. So let's read the first table using the  ```html_table()``` function
+
+```{r}
+population <- html_table(population[[1]],fill = T)
+head(population) #checks if we scraped the desired data
+```
+
+### Scraping data from API's
+
+Reading data from websites can be tricky since you need to first analyze the page structure. Many web-services (e.g., Facebook, Twitter, YouTube) actually have application programming interfaces (API's), which you can use to obtain data in a pre-structured format. JSON (JavaScript Object Notation) is a popular lightweight data-interchange format in which data can be obtained. Let's assume that you would like to obtain population data again. The World Bank has an API that allows you to easily obtain this kind of data. You simply call the API for the desired information (the details are usually provided in the API reference) and get a structured JSON file with the desired key-value pairs in return. For example, the population for Austria from 1960 to 2016 can be obtained using <a href="http://api.worldbank.org/countries/AT/indicators/SP.POP.TOTL/?date=1960:2016&format=json&per_page=100" target="_blank">this call</a>. The file can be easily read into r using the ```fromJSON(...)```-function from the ```jsonlite```-function.
+
+```{r message=FALSE, warning=FALSE}
+library(jsonlite)
+url <- "http://api.worldbank.org/countries/AT/indicators/SP.POP.TOTL/?date=1960:2016&format=json&per_page=100" #specifies url
+ctrydata <- fromJSON(url) #parses the data 
+head(ctrydata[[2]]) #checks if we scraped the desired data
+```    
+    
+## Export data
+
+Exporting to different formats is also easy, as you can just replace "read" with "write" in many of the previously discussed functions (e.g. ```write.table(file_name)```). This will save the data file to the working directory. To check what the current working directory is you can use ```getwd()```. The ```write.table(file_name)```function by default includes the row number as the first variable. By specifying ```row.names = F```, you may exclude this variable since it doesn't contain any useful information.  
+
+```{r eval=FALSE}
+write.table(test_data, "testData.dat",row.names = F, sep = "\t") #writes to a tab-delimited text file
+write.table(test_data, "testData.csv",row.names = F, sep = ",") #writes to a comma-separated value file 
+write_sav(test_data, "my_file.sav")
+```

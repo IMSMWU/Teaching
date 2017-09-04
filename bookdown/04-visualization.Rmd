@@ -1,0 +1,191 @@
+---
+title: "04-visualization"
+output:
+  html_document:
+    toc: yes
+  html_notebook: default
+  pdf_document:
+    toc: yes
+---
+
+# Data visualization
+
+This section dicusses how to produce appropriate graphics to describe our data visually. As the 
+
+<p style="text-align:center;">
+<img src="https://github.com/IMSMWU/Teaching/raw/master/MRDA2017/Graphics/ggplot2.JPG" alt="DSUR cover" height="250"  />&nbsp;&nbsp;&nbsp;
+<img src="https://github.com/IMSMWU/Teaching/raw/master/MRDA2017/Graphics/ggplot1.JPG" alt="DSUR cover" height="250"  />
+</p>
+
+<a href="http://r4ds.had.co.nz/transform.html" target="_blank">this book chapter</a>
+
+
+## Categorical Variables
+
+### Bar plot
+
+Lets go back to the frequency table from the previous chapter, where we created this table:
+
+```{r message=FALSE, warning=FALSE}
+test_data <- read.table("https://raw.githubusercontent.com/IMSMWU/Teaching/master/MRDA2017/test_data.dat", sep = "\t", header = T)
+test_data$overall_knowledge_cat <- factor(test_data$OverallKnowledge, levels = c(0:4), labels = c("none", "basic", "intermediate","advanced","proficient"))
+test_data$gender_cat <- factor(test_data$Gender, levels = c(1:2), labels = c("male", "female"))
+```
+
+How can we plot this kind of data? Since we have a categorical variable, we will use a bar plot. However, to be able to use the table for your plot, you first need to assign it to an object as a data frame using the ```as.data.frame(...)```-function.
+
+```{r message=FALSE, warning=FALSE}
+table_plot_abs <- as.data.frame(table(test_data[,c("overall_knowledge_cat")])) #absolute frequencies
+table_plot_rel <- as.data.frame(prop.table(table(test_data[,c("overall_knowledge_cat")]))) #relative frequencies
+```
+
+```{r message=FALSE, warning=FALSE}
+library(ggplot2)
+ggplot(table_plot_abs) + geom_bar(aes(x=Var1,y=Freq),stat='identity') + ylab("Absolute frequency") + xlab("Overall Knowledge") + theme_bw() + theme(legend.position="none") 
+```
+
+```{r message=FALSE, warning=FALSE}
+ggplot(table_plot_rel) + geom_bar(aes(x=Var1,y=Freq),stat='identity') + ylab("Absolute frequency") + xlab("Overall Knowledge") + theme_bw() + theme(legend.position="none") 
+```
+
+```{r message=FALSE, warning=FALSE}
+table_plot_abs_2 <- as.data.frame(table(test_data[,c("overall_knowledge_cat","gender_cat")])) #absolute frequencies
+table_plot_rel_2 <- as.data.frame(prop.table(table(test_data[,c("overall_knowledge_cat","gender_cat")]))) #relative frequencies
+table_plot_cond_rel_2 <- as.data.frame(prop.table(table(test_data[,c("overall_knowledge_cat","gender_cat")]),2)) #conditional relative frequencies
+```
+```{r message=FALSE, warning=FALSE}
+ggplot(table_plot_abs_2) + geom_bar(aes(x=overall_knowledge_cat,y=Freq),stat='identity') + facet_wrap(~gender_cat) + ylab("Absolute frequency") + xlab("Overall Knowledge") + theme_bw() + theme(legend.position="none") 
+```
+
+```{r message=FALSE, warning=FALSE}
+ggplot(table_plot_rel_2) + geom_bar(aes(x=overall_knowledge_cat,y=Freq),stat='identity') + facet_wrap(~gender_cat) + ylab("Absolute frequency") + xlab("Overall Knowledge") + theme_bw() + theme(legend.position="none") 
+```
+
+```{r message=FALSE, warning=FALSE}
+ggplot(table_plot_cond_rel_2) + geom_bar(aes(x=overall_knowledge_cat,y=Freq),stat='identity') + facet_wrap(~gender_cat) + ylab("Absolute frequency") + xlab("Overall Knowledge") + theme_bw() + theme(legend.position="none") 
+```
+
+To visualise the covariation between categorical variables, you’ll need to count the number of observations for each combination, which is stored in the frequency table. Let's use a different example. Say, we wanted to investigate the association between prior theoretical and prio practical knowledge in regression analysis. First, we need to make sure that the respective variables are coded as factors. 
+
+```{r}
+test_data$Theory_Regression_cat <- factor(test_data$Theory_Regression, levels = c(1:5), labels = c("none", "basic", "intermediate","advanced","proficient"))
+test_data$Practice_Regression_cat <- factor(test_data$Practice_Regression, levels = c(1:5), labels = c("none", "basic", "intermediate","advanced","proficient"))
+```
+
+### Other plots
+
+```{r message=FALSE, warning=FALSE}
+ggplot(data = test_data) + geom_count(mapping = aes(x = Theory_Regression_cat, y = Practice_Regression_cat))  + ylab("Practical knowledge") + xlab("Theoretical knowledge") + theme_bw()
+```
+
+
+```{r message=FALSE, warning=FALSE}
+table_plot_abs_reg <- as.data.frame(table(test_data[,c("Theory_Regression_cat","Practice_Regression_cat")])) #absolute frequencies
+ggplot(table_plot_abs_reg, aes(x = Theory_Regression_cat, y = Practice_Regression_cat)) + geom_tile(mapping = aes(fill = Freq)) + ylab("Practical knowledge") + xlab("Theoretical knowledge") + theme_bw()
+```
+
+## Continuous Variables
+
+
+### Histogram
+
+
+
+For continuous data histograms can be plotted using the ```hist(..., freq = FALSE)``` command. ```freq = FALSE``` is used to plot a density instead of a frequency. Other options are similar to the ones used in the [barplot](#barplot) example. Alternatively a density can be plotted by passing the data to ```plot(density(...))```.  
+
+
+```{r message=FALSE, warning=FALSE}
+adv_data <- read.table("https://raw.githubusercontent.com/IMSMWU/Teaching/master/MRDA2017/advertising_sales.dat", sep = "\t", header = T)
+adv_data$store <- factor(adv_data$store, levels = c(1:2), labels = c("store1", "store2"))
+ggplot(adv_data, aes(sales)) + geom_histogram(binwidth = 3000, col="black", fill="darkblue") + labs(x = "Number of sales", y = "Frequency") + theme_bw()
+```
+
+Two plots can be combined by using ```lines(...)``` instead of ```plot(...)``` for the second plot.
+
+### Boxplot
+
+```{r message=FALSE, warning=FALSE}
+ggplot(adv_data, aes(x = store, y = sales)) +
+geom_boxplot() + labs(x = "Store ID", y = "Number of sales") + theme_bw() #add the graphical layers
+```
+
+### Plot of means
+
+```{r message=FALSE, warning=FALSE}
+ggplot(adv_data, aes(store, sales)) + stat_summary(fun.y = mean, geom = "bar", fill="White", colour="Black") +
+  stat_summary(fun.data=mean_cl_normal, geom = "pointrange") + labs(x = "Store ID", y = "Number of sales") +
+  coord_cartesian(ylim=c(100000,130000)) +theme_bw()
+```
+
+
+### Scatter plot
+
+```{r message=FALSE, warning=FALSE}
+ggplot(adv_data, aes(advertising,sales)) + #create the plot object
+  geom_point() + #add the graphical layers
+  geom_smooth(method="lm", fill="blue", alpha=0.1) + #add a line ("linear model") & CI
+  labs(x = "Advertising expenditures (EUR)",y = "Number of sales", colour="store") + theme_bw() #add axis labels
+```
+
+### Grouped scatter plot
+
+```{r message=FALSE, warning=FALSE}
+ggplot(adv_data, aes(advertising,sales,colour=store)) + #create the plot object
+  geom_point() + #add the graphical layers
+  geom_smooth(method="lm", aes(fill=store),alpha=0.1) + 
+  labs(x = "Advertising expenditures (EUR)",y = "Number of sales", colour="store") + theme_bw() #add axis labels
+```
+
+### Line plot
+
+```{r message=FALSE, warning=FALSE}
+library(jsonlite)
+url <- "http://api.worldbank.org/countries/AT/indicators/SP.POP.TOTL/?date=1960:2016&format=json&per_page=100" #specifies url
+ctrydata_at <- fromJSON(url) #parses the data 
+head(ctrydata_at[[2]]) #checks if we scraped the desired data
+ctrydata_at <- ctrydata_at[[2]][,c("date","value")]
+ctrydata_at$value <- as.numeric(ctrydata_at$value)
+ctrydata_at$date <- as.integer(ctrydata_at$date)
+str(ctrydata_at)
+ggplot(ctrydata_at, aes(x = date, y = value)) + geom_line() + ylab("Population") + xlab("Year") + theme_bw()
+
+```    
+
+## Additional options
+
+```{r message=FALSE, warning=FALSE}
+library(ggmap)
+library(dplyr)
+geo_data <- read.table("https://raw.githubusercontent.com/IMSMWU/Teaching/master/MRDA2017/geo_data.dat", sep = "\t", header = T)
+head(geo_data)
+# Draw the heat map
+# Download the base map
+de_map_g_str <- get_map(location = "Germany", zoom = 6)
+# Draw the heat map
+ggmap(de_map_g_str, extent = "device") + geom_density2d(data = geo_data, aes(x = lon, y = lat), size = 0.3) + 
+  stat_density2d(data = geo_data, 
+                 aes(x = lon, y = lat, fill = ..level.., alpha = ..level..), size = 0.01, 
+                 bins = 16, geom = "polygon") + scale_fill_gradient(low = "green", high = "red") + 
+  scale_alpha(range = c(0, 0.3), guide = FALSE)
+
+geo_data <- geo_data %>% group_by(latlon) %>% dplyr::summarise(sumCount=n(),lat=first(lat),lon=first(lon)) %>% filter(!is.na(latlon)) %>% as.data.frame()
+
+circle_scale_amt = 0.15 # make the circles 25% of the size!
+usa_center = as.numeric(geocode("Germany"))
+USAMap = ggmap(get_googlemap(center=usa_center, scale=2, zoom=6), extent="normal")
+USAMap + geom_point(aes(x=lon, y=lat), data=geo_data, col="orange", alpha=0.3, 
+             size=geo_data$sumCount*circle_scale_amt) + scale_size_continuous(range=range(geo_data$sumCount)) + 
+              ylim(min(geo_data$lat),max(geo_data$lat)) + xlim(min(geo_data$lon),max(geo_data$lon)) 
+
+
+```
+
+## Saving plots
+
+```{r eval=FALSE}
+ggplot(table_plot_abs_reg, aes(x = Theory_Regression_cat, y = Practice_Regression_cat)) + geom_tile(mapping = aes(fill = Freq)) + ylab("Practical knowledge") + xlab("Theoretical knowledge") + theme_bw()
+ggsave("theory_practice_regression.jpeg", height = 5, width = 7.5)
+```
+
+
+
