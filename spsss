@@ -1,0 +1,130 @@
+============================
+#  Import and prepare data
+#============================
+
+# Clear R environment: 
+rm(list = ls())
+library(dplyr)
+
+# Import data: 
+
+read.delim("http://www.discoveringstatistics.com/docs/ds_data_files/R%20Data%20Files/raq.dat") -> saq_data
+set.seed(12)
+data_mini <- saq_data %>% sample_n(357)
+library(psych)
+rotated_fMatrix <- principal(data_mini, nfactors = 4, rotate = "varimax")
+
+print.psych(rotated_fMatrix, cut = 0.3, digits = 3, sort = TRUE) # Page 665. 
+# Function replaces some values: 
+
+replace_someVar <- function(x) {
+  
+  y <- which(x == 1)
+  
+  z1 <- sample(y, floor(0.2*length(y)))
+  
+  x[z1] <- 2
+  
+  y5 <- which(x == 5)
+  
+  z2 <- sample(y5, floor(0.2*length(y5)))
+  
+  x[z2] <- 4
+  
+  y4 <- which(x == 4)
+  
+  z3 <- sample(y4, floor(0.3*length(y4)))
+  
+  x[z3] <- 5
+
+  y2 <- which(x == 2)
+  
+  t2 <- sample(y2, floor(0.3*length(y2)))
+  
+  x[t2] <- 3
+  
+  y3 <- which(x == 3)
+  
+  k3 <- sample(y3, floor(0.2*length(y3)))
+  
+  x[k3] <- 4
+  
+  return(x)
+}
+#==================
+#  Generate data
+#==================
+
+# TCCV: 
+
+factor_TCCV <- data_mini %>% 
+  mutate(tccv1 = Q21, 
+         tccv2 = replace_someVar(tccv1), 
+         tccv3 = replace_someVar(tccv1), 
+         tccv4 = replace_someVar(tccv1), 
+         tccv5 = replace_someVar(tccv1), 
+         tccv6 = replace_someVar(tccv1), 
+         tccv7 = replace_someVar(tccv1), 
+         tccv8 = replace_someVar(tccv1)) %>% 
+  select(contains("tccv"))
+
+psych::alpha(factor_TCCV) -> cronbach_TCCV
+
+# QHCV: 
+
+factor_QH <- data_mini %>% 
+  mutate(qh1 = Q17, 
+         qh2 = replace_someVar(qh1), 
+         qh3 = replace_someVar(qh1), 
+         qh4 = replace_someVar(qh1), 
+         qh5 = replace_someVar(qh1), 
+         qh6 = replace_someVar(qh1)) %>% 
+  select(contains("qh"))
+
+psych::alpha(factor_QH) -> cronbach_QH
+
+
+# TLPL: 
+
+factor_TLPL <- data_mini %>% 
+  mutate(tlpl1 = Q01, 
+         tlpl2 = replace_someVar(tlpl1), 
+         tlpl3 = replace_someVar(tlpl1), 
+         tlpl4 = replace_someVar(tlpl1)) %>% 
+  select(contains("tlpl"))
+
+psych::alpha(factor_TLPL) -> cronbach_TLPL
+
+
+# DTPT: 
+
+factor_DTPT <- data_mini %>% 
+  mutate(dtpt1 = Q06, 
+         dtpt2 = replace_someVar(dtpt1), 
+         dtpt3 = replace_someVar(dtpt1), 
+         dtpt4 = replace_someVar(dtpt1)) %>% 
+  select(contains("dtpt"))
+
+psych::alpha(factor_DTPT) -> cronbach_DTPT
+
+
+# SHL: 
+
+factor_SHL <- data_mini %>% 
+  mutate(shl1 = Q22, 
+         shl2 = replace_someVar(shl1), 
+         shl3 = replace_someVar(shl1)) %>% 
+  select(contains("shl"))
+
+
+psych::alpha(factor_SHL) -> cronbach_SHL
+
+
+# Combine data sets: 
+
+factor_DTPT %>% 
+  bind_cols(factor_QH) %>% 
+  bind_cols(factor_SHL) %>% 
+  bind_cols(factor_TCCV) %>% 
+  bind_cols(factor_TLPL) -> data_for_paper
+  haven::write_sav(data_for_paper, "data_for_paper.sav")
